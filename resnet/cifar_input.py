@@ -45,21 +45,36 @@ def build_input(dataset, data_path, batch_size, mode):
     raise ValueError('Not supported dataset %s', dataset)
 
   depth = 3
+
+  # TK: Why do we need to calculate the total image bytes?
   image_bytes = image_size * image_size * depth
+
+  # TK: Is the record bytes to shape the memory chunk?
   record_bytes = label_bytes + label_offset + image_bytes
 
+  # TK: Read files from the given path
   data_files = tf.gfile.Glob(data_path)
+
+  # TK: Generate a queue in which the list of file names shuffled and stored.
   file_queue = tf.train.string_input_producer(data_files, shuffle=True)
+
   # Read examples from files in the filename queue.
+  # TK: Create a recorder formatted with the fixed size of memory for faster read?
   reader = tf.FixedLengthRecordReader(record_bytes=record_bytes)
+
+  # TK: Read files in the queue to the reader.
   _, value = reader.read(file_queue)
 
   # Convert these examples to dense labels and processed images.
   record = tf.reshape(tf.decode_raw(value, tf.uint8), [record_bytes])
+
+  # TK: Extract labels from the record
   label = tf.cast(tf.slice(record, [label_offset], [label_bytes]), tf.int32)
+
   # Convert from string to [depth * height * width] to [depth, height, width].
   depth_major = tf.reshape(tf.slice(record, [label_bytes], [image_bytes]),
                            [depth, image_size, image_size])
+
   # Convert from [depth, height, width] to [height, width, depth].
   image = tf.cast(tf.transpose(depth_major, [1, 2, 0]), tf.float32)
 
